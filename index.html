@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CHATTR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #161616;
+      --border: #1e1e1e;
+      --accent: #e8ff3e;
+      --accent2: #ff4e3a;
+      --green: #3dff87;
+      --text: #f0f0f0;
+      --muted: #444;
+      --muted2: #666;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* grid bg */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(232,255,62,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(232,255,62,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* ═══════════════════════════════════
+       LOGIN SCREEN
+    ═══════════════════════════════════ */
+    #login-screen {
+      position: fixed; inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      background: var(--bg);
+      animation: fadeIn 0.4s ease both;
+    }
+
+    .login-card {
+      width: 400px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 52px 44px;
+      position: relative;
+      animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 2.8rem;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .logo span { color: var(--accent); }
+
+    .tagline {
+      font-size: 0.68rem;
+      color: var(--muted2);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 44px;
+    }
+
+    .field-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted2);
+      margin-bottom: 8px;
+    }
+
+    #name-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 14px;
+    }
+
+    #name-input:focus { border-color: var(--accent); }
+    #name-input::placeholder { color: var(--muted); }
+
+    #join-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--accent);
+      border: none;
+      color: #0a0a0a;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    #join-btn:hover { background: #fff; }
+    #join-btn:active { transform: scale(0.98); }
+
+    #login-error {
+      margin-top: 12px;
+      font-size: 0.72rem;
+      color: var(--accent2);
+      min-height: 18px;
+      text-align: center;
+    }
+
+    .login-footer {
+      margin-top: 36px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      line-height: 1.8;
+    }
+
+    /* ═══════════════════════════════════
+       CHAT SCREEN
+    ═══════════════════════════════════ */
+    #chat-screen {
+      display: none;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      inset: 0;
+    }
+
+    #chat-screen.visible {
+      display: flex;
+      animation: fadeIn 0.3s ease both;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 58px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, var(--accent), transparent 55%);
+    }
+
+    .header-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -1px;
+    }
+    .header-logo span { color: var(--accent); }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    #online-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      color: var(--muted2);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* Online users tooltip */
+    #users-tooltip {
+      display: none;
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 0.68rem;
+      white-space: nowrap;
+      z-index: 99;
+      min-width: 140px;
+    }
+
+    #online-pill:hover #users-tooltip { display: block; }
+
+    .user-entry {
+      padding: 3px 0;
+      letter-spacing: 0.04em;
+    }
+
+    .you-tag {
+      font-size: 0.58rem;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+
+    #my-name-display {
+      font-size: 0.7rem;
+      color: var(--muted2);
+      letter-spacing: 0.05em;
+    }
+
+    #my-name-display strong { color: var(--accent); }
+
+    /* Messages */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 0 8px;
+      scroll-behavior: smooth;
+    }
+
+    #messages::-webkit-scrollbar { width: 3px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .msg-row {
+      display: flex;
+      padding: 3px 24px;
+      gap: 10px;
+      animation: msgIn 0.2s ease both;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-row.me { flex-direction: row-reverse; }
+
+    .avatar-circle {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.72rem;
+      color: #0a0a0a;
+      margin-top: 2px;
+    }
+
+    .bubble-col {
+      max-width: 62%;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .msg-row.me .bubble-col { align-items: flex-end; }
+
+    .sender-tag {
+      font-size: 0.6rem;
+      letter-spacing: 0.06em;
+      color: var(--muted2);
+      padding: 0 2px;
+    }
+
+    .bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 0.81rem;
+      line-height: 1.55;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .msg-row.me .bubble {
+      border-color: rgba(232,255,62,0.18);
+      background: #131500;
+    }
+
+    .time-tag {
+      font-size: 0.57rem;
+      color: var(--muted);
+      padding: 0 2px;
+    }
+
+    /* System messages */
+    .sys-row {
+      text-align: center;
+      padding: 10px 24px;
+      font-size: 0.62rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Typing + input footer */
+    #typing-bar {
+      padding: 0 24px 6px;
+      font-size: 0.63rem;
+      color: var(--muted2);
+      letter-spacing: 0.04em;
+      height: 22px;
+    }
+
+    #input-area {
+      display: flex;
+      padding: 14px 24px;
+      gap: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #msg-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-right: none;
+      padding: 13px 16px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      outline: none;
+      height: 48px;
+      transition: border-color 0.2s;
+    }
+
+    #msg-input:focus { border-color: var(--accent); }
+    #msg-input::placeholder { color: var(--muted); }
+
+    #send-btn {
+      height: 48px;
+      padding: 0 22px;
+      background: var(--accent);
+      border: none;
+      color: #0a0a0a;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    #send-btn:hover { background: #fff; }
+    #send-btn:active { transform: scale(0.97); }
+  </style>
+</head>
+<body>
+
+  <!-- ══ LOGIN ══════════════════════════════ -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="logo">CHATTR<span>.</span></div>
+      <div class="tagline">Real-time · Local · No noise</div>
+
+      <div class="field-label">Your display name</div>
+      <input id="name-input" type="text" placeholder="e.g. Alice" maxlength="24" autocomplete="off" />
+      <button id="join-btn">Join Room →</button>
+      <div id="login-error"></div>
+
+      <div class="login-footer">
+        Running locally on your machine.<br>
+        Anyone on the same network can join at<br>
+        <strong style="color:var(--muted2)">http://&lt;your-ip&gt;:3000</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CHAT ═══════════════════════════════ -->
+  <div id="chat-screen">
+    <header>
+      <div class="header-logo">CHATTR<span>.</span></div>
+      <div class="header-right">
+        <div id="online-pill">
+          <div class="dot"></div>
+          <span id="online-label">0 online</span>
+          <div id="users-tooltip"></div>
+        </div>
+        <div id="my-name-display"></div>
+      </div>
+    </header>
+
+    <div id="messages"></div>
+    <div id="typing-bar"></div>
+
+    <div id="input-area">
+      <input id="msg-input" type="text" placeholder="Type a message…" maxlength="500" autocomplete="off"/>
+      <button id="send-btn">Send →</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const SERVER = `http://${window.location.hostname}:3000`;
+    const socket = io(SERVER);
+
+    let myName = "";
+    let mySocketId = "";
+    const typingMap = {}; // socketId → name
+
+    // ── helpers ──────────────────────────────
+    function escHtml(s) {
+      return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function getInitial(name) {
+      return name.trim().charAt(0).toUpperCase();
+    }
+
+    function addMessage(data, animate = true) {
+      const isMe = data.socketId === mySocketId;
+      const row = document.createElement("div");
+      row.className = `msg-row${isMe ? " me" : ""}`;
+      if (!animate) row.style.animation = "none";
+
+      row.innerHTML = `
+        <div class="avatar-circle" style="background:${data.color}">${getInitial(data.name)}</div>
+        <div class="bubble-col">
+          ${!isMe ? `<div class="sender-tag">${escHtml(data.name)}</div>` : ""}
+          <div class="bubble">${escHtml(data.text)}</div>
+          <div class="time-tag">${data.time}</div>
+        </div>
+      `;
+
+      document.getElementById("messages").appendChild(row);
+      scrollBottom();
+    }
+
+    function addSys(text) {
+      const el = document.createElement("div");
+      el.className = "sys-row";
+      el.textContent = text;
+      document.getElementById("messages").appendChild(el);
+      scrollBottom();
+    }
+
+    function scrollBottom() {
+      const m = document.getElementById("messages");
+      m.scrollTop = m.scrollHeight;
+    }
+
+    function updateTypingBar() {
+      const names = Object.values(typingMap).filter(n => n !== myName);
+      const bar = document.getElementById("typing-bar");
+      if (names.length === 0) { bar.textContent = ""; return; }
+      bar.textContent = `${names.slice(0,2).join(", ")} ${names.length === 1 ? "is" : "are"} typing…`;
+    }
+
+    // ── Socket events ─────────────────────────
+    socket.on("connect", () => { mySocketId = socket.id; });
+
+    socket.on("history", (msgs) => {
+      msgs.forEach(m => addMessage(m, false));
+      if (msgs.length) addSys("— earlier messages —");
+    });
+
+    socket.on("receive_message", (data) => {
+      // clear typing for sender
+      delete typingMap[data.socketId];
+      updateTypingBar();
+      addMessage(data);
+    });
+
+    socket.on("system_msg", ({ text }) => addSys(text));
+
+    socket.on("online_users", (names) => {
+      const label = document.getElementById("online-label");
+      label.textContent = `${names.length} online`;
+
+      const tooltip = document.getElementById("users-tooltip");
+      tooltip.innerHTML = names.map(n =>
+        `<div class="user-entry">${escHtml(n)}${n === myName ? `<span class="you-tag">(you)</span>` : ""}</div>`
+      ).join("");
+    });
+
+    socket.on("user_typing", ({ name, socketId }) => {
+      if (socketId === mySocketId) return;
+      typingMap[socketId] = name;
+      updateTypingBar();
+      // auto-clear after 3s
+      clearTimeout(typingMap[`_t_${socketId}`]);
+      typingMap[`_t_${socketId}`] = setTimeout(() => {
+        delete typingMap[socketId];
+        updateTypingBar();
+      }, 3000);
+    });
+
+    socket.on("user_stop_typing", ({ socketId }) => {
+      delete typingMap[socketId];
+      updateTypingBar();
+    });
+
+    // ── Login ─────────────────────────────────
+    function joinRoom() {
+      const input = document.getElementById("name-input");
+      const name = input.value.trim();
+      const errEl = document.getElementById("login-error");
+
+      if (!name) { errEl.textContent = "Please enter a name."; return; }
+      if (name.length < 2) { errEl.textContent = "Name must be at least 2 characters."; return; }
+
+      myName = name;
+      socket.emit("join", { name });
+
+      document.getElementById("login-screen").style.display = "none";
+      const chat = document.getElementById("chat-screen");
+      chat.classList.add("visible");
+
+      document.getElementById("my-name-display").innerHTML = `Logged in as <strong>${escHtml(name)}</strong>`;
+      document.getElementById("msg-input").focus();
+    }
+
+    document.getElementById("join-btn").addEventListener("click", joinRoom);
+    document.getElementById("name-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") joinRoom();
+    });
+
+    // ── Send ──────────────────────────────────
+    let typingTimer = null;
+    let isTyping = false;
+
+    function sendMessage() {
+      const input = document.getElementById("msg-input");
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+      socket.emit("send_message", { text });
+      socket.emit("stop_typing");
+      isTyping = false;
+    }
+
+    document.getElementById("send-btn").addEventListener("click", sendMessage);
+
+    document.getElementById("msg-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { sendMessage(); return; }
+
+      if (!isTyping) {
+        socket.emit("typing");
+        isTyping = true;
+      }
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        socket.emit("stop_typing");
+        isTyping = false;
+      }, 2000);
+    });
+  </script>
+</body>
+</html>
